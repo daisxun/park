@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+     "van-button": "/static/vant/icon/index",
+     "van-button": "/static/vant/popup/index"
+  }
+}

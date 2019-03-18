@@ -1,0 +1,57 @@
+{
+  "pages": [
+      "pages/jumplist/record/main",
+      "pages/jumplist/lease/main",
+   "pages/jumplist/car/main",
+        "pages/jumplist/coupon/main",
+         "pages/personal/main", 
+     "pages/jumplist/collect/main",
+ "pages/jumplist/parking/main",
+ "pages/jumplist/paycoupon/main",        
+       "pages/jumplist/relation/main",
+       "pages/index/main",
+      "pages/jumplist/bill/main",
+  
+    "pages/jumplist/mag/main",
+    "pages/jumplist/phone/main",
+    "pages/jumplist/card/main",
+    "pages/message/main",
+    "pages/nearby/main"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#434343",
+    "navigationBarTitleText": "",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#999", 
+    "backgroundColor": "#fafafa",
+    "selectedColor": "#333",
+    "borderStyle": "white",
+
+    "list": [{
+      "text": "主页",
+      "pagePath": "pages/index/main",
+      "iconPath": "static/tabs/home.png",
+      "selectedIconPath": "static/tabs/home_selected.png"
+    }, 
+    {
+      "text": "附近",
+      "pagePath": "pages/nearby/main",
+      "iconPath": "static/tabs/neboor.png",
+      "selectedIconPath": "static/tabs/neboor_selected.png"
+    }, {
+      "text": "消息",
+      "pagePath": "pages/message/main",
+      "iconPath": "static/tabs/news.png",
+      "selectedIconPath": "static/tabs/news_selected.png"
+    },{
+      "text": "个人",
+      "pagePath": "pages/personal/main",
+      "iconPath": "static/tabs/person.png",
+      "selectedIconPath": "static/tabs/person_selected.png"
+    }],
+    "position": "bottom"
+  }
+}
