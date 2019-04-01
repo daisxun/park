@@ -1,23 +1,53 @@
 {
   "pages": [
-      "pages/jumplist/record/main",
-      "pages/jumplist/lease/main",
-   "pages/jumplist/car/main",
-        "pages/jumplist/coupon/main",
-         "pages/personal/main", 
-     "pages/jumplist/collect/main",
- "pages/jumplist/parking/main",
- "pages/jumplist/paycoupon/main",        
-       "pages/jumplist/relation/main",
-       "pages/index/main",
+    "pages/login/main",
+    "pages/personal/main", 
+    "pages/index/main",
+    "pages/jumplist/addCar/main",
+    "pages/jumplist/protocol/main",
+    "pages/jumplist/visitors/main",
+    "pages/jumplist/visitAddCar/main",
+    "pages/jumplist/car/main",
+    "pages/jumplist/ticketpay/main",
+    "pages/jumplist/ticketpayorder/main",
+    "pages/jumplist/mounrent/main",
+    "pages/jumplist/mounrentorder/main",
+    
+  
+    "pages/jumplist/parkspace/main",
+    "pages/jumplist/parkspaceorder/main",
+    "pages/jumplist/change/main",
+    "pages/jumplist/parking/main",
+    "pages/nearby/main",
+    "pages/jumplist/nearbyDetail/main",
+    "pages/message/main",
+    "pages/jumplist/paymentorder/main",
+   
+
+    "pages/jumplist/lease/main",
+    "pages/jumplist/leasedetail/main",
+    "pages/jumplist/paycoupon/main",        
+    
+       
       "pages/jumplist/bill/main",
+      "pages/jumplist/billpaylist/main",
+      "pages/jumplist/billunpaylist/main",
   
     "pages/jumplist/mag/main",
     "pages/jumplist/phone/main",
     "pages/jumplist/card/main",
-    "pages/message/main",
-    "pages/nearby/main"
+
+    
+
+    "pages/jumplist/relation/main",
+    "pages/jumplist/collect/main",
+    "pages/jumplist/record/main"
   ],
+  "permission": {
+		"scope.userLocation": {
+			"desc": "你的位置信息将用于小程序位置接口的效果展示"
+		}
+	},
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#434343",

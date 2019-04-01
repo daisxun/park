@@ -3,12 +3,12 @@
    	<div class="title_box">
    		<div class="avatar_box">
    			<div class="avatar">
-   				 <img class="userinfo-avatar" src="/static/images/jmar.png" background-size="cover" />
+   				 <img class="userinfo-avatar" :src="headimg" background-size="cover" />
    			</div>
    			<div class="personal">
    				<ul>
-   					<li>粉色瞳孔</li>
-   					<li>12345678911</li>
+   					<li>{{wxmame}}</li>
+   					<li>{{myphone}}</li>
    				</ul>
    			</div>
    			<a class="link" href="/pages/jumplist/mag/main" >
@@ -17,7 +17,7 @@
    		</div>			
    	</div>
    	<div class="card">
-   		<a class="bar" v-for="(list,index) in coupon" wx:key="index" :href="coupon[index].jump">
+   		<div class="bar" v-for="(list,index) in coupon" :key="index" @click="jumpPage(list)">
    			<div class="imgvar">
    				<img class="coupon" :src="coupon[index].url" background-size="cover" />
    			</div>
@@ -27,11 +27,11 @@
    			<div class="numb">
    				<p>{{coupon[index].number}}</p>
    			</div>
-   		</a>
+   		</div>
    	</div>
    	<hr class="line">
    	<div class="list">
-   		<a class="item" v-for="(list,index) in itemhead" wx:key="index"  :href="itemhead[index].jump">
+   		<a class="item" v-for="(list,index) in itemhead" :key="index"  :href="itemhead[index].jump">
    			<div class="leftitem">
    				<img :class="itemhead[index]._style" :src="itemhead[index].url"  />
    			</div>
@@ -48,7 +48,7 @@
    			<div class="leftitem">
    				<img class="item_img" src="/static/images/server.png" />
    			</div>
-   			<div class="centeritem">
+   			<div class="centeritem" @click="calling">
    				<p>客服</p>
    			</div>
    			<div class="rightitem">
@@ -59,18 +59,90 @@
 </template>
 
 <script>
+import store from '../store';
+import getcontent from '../../utils/api';
 export default {
   data () {
     return {
-      coupon: [{name: '停车券', url: '/static/images/parking.png', number: '0', jump: '/pages/jumplist/parking/main'}, {name: '优惠券', url: '/static/images/coupon.png', number: '0', jump: '/pages/jumplist/coupon/main'}, {name: '月租券', url: '/static/images/lease.png', number: '0', jump: '/pages/jumplist/lease/main'}],
-      itemhead: [{name: '停车记录', url: '/static/images/record.png', _style: 'record', jump: '/pages/jumplist/record/main'}, {name: '我的账单', url: '/static/images/bill.png', _style: 'bill', jump: '/pages/jumplist/bill/main'}, {name: '我的车辆', url: '/static/images/car.png', _style: 'car', jump: '/pages/jumplist/car/main'}, {name: '我的收藏', url: '/static/images/collect.png', _style: 'collect', jump: '/pages/jumplist/collect/main'}, {name: '车场组关联', url: '/static/images/relation.png', _style: 'relation', jump: '/pages/jumplist/relation/main'}]
+	  headimg:"/static/images/jmar.png",
+	  wxmame:"null",
+	  myphone:"",
+	  coupon: [{name: '停车券', url: '/static/images/parking.png', number: '0', jump: '/pages/jumplist/parking/main'}, 
+			   {name: '优惠券', url: '/static/images/coupon.png', number: '0', jump: '/pages/jumplist/coupon/main'}, 
+			  //  {name: '优惠券', url: '/static/images/coupon.png', number: '0', jump: ''}, 
+			{name: '月租车', url: '/static/images/lease.png', number: '0', jump: '/pages/jumplist/lease/main'}],
+	  itemhead: [
+		//   {name: '停车记录', url: '/static/images/record.png', _style: 'record', jump: '/pages/jumplist/record/main'}, 
+		  {name: '我的账单', url: '/static/images/bill.png', _style: 'bill', jump: '/pages/jumplist/bill/main'}, 
+		  {name: '我的车辆', url: '/static/images/car.png', _style: 'car', jump: '/pages/jumplist/car/main'}, 
+		//   {name: '我的收藏', url: '/static/images/collect.png', _style: 'collect', jump: '/pages/jumplist/collect/main'},
+		//   {name: '车场组关联', url: '/static/images/relation.png', _style: 'relation', jump: '/pages/jumplist/relation/main'}
+		  ]
     }
-  },
-  onLoad(){
-    // console.log("onLoad")
+	},
+	methods:{
+		jumpPage:function(e){
+				console.log(e.jump)
+					if(e.name=="停车券"){
+							wx.navigateTo({ url: e.jump})
+					}else if(e.name=="优惠券"){
+										wx.showToast({
+											title: '暂无优惠券信息',
+											icon: 'none',
+											duration: 2000
+										})
+								// wx.navigateTo({ url: e.jump})
+								wx.sho
+					}else if(e.name=="月租车"){
+							wx.navigateTo({ url: e.jump})
+					}
+			},
+		calling:function(){
+			let than=this;
+				  wx.makePhoneCall({
+				        phoneNumber: '***************',
+				        success: function () {
+				            console.log("拨打电话成功！")
+				        },
+				        fail: function () {
+				            console.log("拨打电话失败！")
+				        }
+				    })
+   }
+	},
+  mounted(){
+	  let than=this;
+		 than.headimg=store.state.wxinfo.avatarUrl;
+		 than.wxmame=store.state.userinfo.wx_nickname;
+		 than.myphone=store.state.userinfo.phone;
   },
   onShow(){
-    // console.log(456)
+    let than=this;
+    let conf={
+      "token":store.state.token,
+      "consumer": "cn.sanray.city.parking.carowner.client.service.WxClient",
+      "id": "getMemberInfo",
+    }
+    // console.log("conf",conf)
+    getcontent.getapi(conf,{},function(data){
+			console.log(data)
+      if(data.data.result.code==0){
+			let remember=data.data.data[0];
+						store.commit("setMemberInfo",remember)
+						than.coupon=[
+							{name: '停车券', url: '/static/images/parking.png', number: remember.wallet_mny, jump: '/pages/jumplist/parking/main'}, 
+							{name: '优惠券', url: '/static/images/coupon.png', number:remember.coupon_count, jump: '/pages/jumplist/coupon/main'}, 
+							// {name: '优惠券', url: '/static/images/coupon.png', number:remember.coupon_count, jump: '#'}, 
+							 {name: '月租车', url: '/static/images/lease.png', number: remember.car_count, jump: '/pages/jumplist/lease/main'}]
+							 
+      }else if(data.data.result.code==400001){
+          Dialog.alert({
+              message: 'token失效，重新登录'
+            }).then(() => {
+              wx.navigateTo({ url: '/pages/login/main'})
+            });
+      }
+    })
   }
 }
 </script>
@@ -86,7 +158,8 @@ export default {
   .avatar_box{
   	display: flex;
     background-color: #434343;
-    padding:0 60rpx;
+	/* background: red; */
+    padding:0 20rpx;
   }
   .avatar{
     height:176rpx;
@@ -128,7 +201,7 @@ export default {
   	height:210rpx;
   	width:100%;
   	box-sizing:border-box;
-  	padding:0 40rpx;
+  	padding:0 10rpx;
   	background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAEnCAYAAACZnHKbAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACCSURBVHhe7cuxDQAhEMAwdmN25rrfIAUdL0dK6bX3npvBGIzBGIzBGIzBGIzBGIzBGIzBGIxfguecuXnNZWAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmAERmD0fzjzAQcxVr7cU2k7AAAAAElFTkSuQmCC");
   	box-sizing:border-box;
   	background-repeat:no-repeat; 
@@ -159,7 +232,7 @@ export default {
   .numb p{
   	color:#FE9E2D;
   	text-align:center;
-  	ont-size:28rpx
+  	font-size:28rpx
   }
   .line{
   	background:#F2F9FF;
@@ -172,7 +245,7 @@ export default {
   	width:100%;
   	background:#FFFFFF;
   	box-sizing:border-box;
-  	padding:0 30rpx;
+  	padding:0 10rpx;
   	display:flex;
   	border-bottom:2rpx solid rgba(242,249,255,1);
   }

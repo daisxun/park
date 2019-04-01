@@ -1,0 +1,8 @@
+{
+    "usingComponents": {
+       "van-checkbox": "/static/vant/checkbox/index",
+       "van-dialog": "/static/vant//dialog/index",
+         "van-radio": "/static/vant/radio/index",
+  "van-radio-group": "/static/vant/radio-group/index"
+    }
+}

@@ -5,11 +5,11 @@
    	  	<p>头像</p>
    	  </div>
    	  <div class="head_right">
-   	  	<img src="/static/images/jmar.jpeg">
+   	  	<img :src="headimg">
    	  </div>
    </div>
    <div class="body">
-   	 <div class="item" v-for="(tar,index) in options" wx:key="index"  v-on:click="jump(tar.flag)">
+   	 <div class="item" v-for="(tar,index) in options" :key="index"  v-on:click="jump(tar.flag)">
    	 	<div class="item_left" >
    	 		<p>{{tar.keys}}</p>
    	 	</div>
@@ -17,18 +17,19 @@
    	 		<p>{{tar.bindval}}</p>
    	 	</div>
    	 </div>
-   	 <button>注销</button>
+   	 <!-- <button @click="del" >注销</button> -->
    </div>
   </div>
 </template>
 
 <script>
+ import store from '../../store';
+//  console.log(store)
 export default {
   data () {
     return {
-      options: [{keys: '手机', bindval: '绑定>>', flag: '../phone/main'}, 
-                {keys: '昵称', bindval: 'jddj', flag: ''}, 
-                {keys: '身份证', bindval: '绑定>>', flag: '../card/main'}]
+			headimg:"",
+      options: []
     }
   },
   methods: {
@@ -40,8 +41,21 @@ export default {
   	 		}else{
   	 			return
   	 		}
-  		 }
-  }
+			 },
+			del:function(){
+				console.log(123)
+			}
+	},
+	mounted(){
+		let than=this;
+		 than.headimg=store.state.wxinfo.avatarUrl;
+		//  console.log(store.state.userinfo.phone)
+		 than.options=[
+			 {keys: '手机', bindval: store.state.userinfo.phone, flag: "../phone/main"}, 
+				{keys: '昵称', bindval: store.state.userinfo.wx_nickname, flag: ""}, 
+					// {keys: '身份证', bindval: '绑定>>', flag: '../card/main'}
+		 ]
+	}
 
 }
 </script>

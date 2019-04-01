@@ -1,14 +1,14 @@
 <template>
   <div class="bg">
   	<div class="txt_input_phone">
-  	  <p class="">请输入您的手机号码</p>
+  	  <p class="">请输入您的新手机号码</p>
   	  <input type="number"  maxlength="11"  v-model="phone"  v-on:input='watchphone' placeholder="请输入您的手机号码">
   	</div>
   	  <hr/>
     <div class="txt_input_ver">
   	  <p class="">请输入您的手机验证码</p>
   	  <div class="inputbox">
-  	  	<input type="" name="" placeholder="请输入您的手机验证码">
+  	  	<input type="number"  v-model="vernumber" placeholder="请输入您的手机验证码">
   	  	<span v-on:click="getver">{{timer}}</span>
   	  </div>
   	</div>
@@ -20,6 +20,9 @@
 
 <script>
 import mpToast from 'mpvue-weui/src/toast';
+import getcontent from '../../../utils/api';
+import store from '../../store';
+//  console.log("phone",store.state.userinfo.token)
 export default {
    components: {
 	    mpToast,
@@ -28,9 +31,11 @@ export default {
     return {
       phone: '',
       timer:'发送验证码',
-      clickflag:true,
+			clickflag:true,
+			vernumber:"",
       completeflag:false,
-      showToast:false,
+			showToast:false,
+			
     }
   },
    methods: {
@@ -53,15 +58,16 @@ export default {
 	    		if(than.clickflag){
 	    			than.clickflag=false;
 	    			than.timer=5
-	    			console.log("----点击一次----");
-	    			let timer = setInterval(function () {
-					    console.log("----Countdown----");
+						// console.log("----点击一次----");
+							than.sencode(than)
+	    		than.calt = setInterval(function () {
+					    // console.log("----Countdown----");
 					    than.timer=than.timer-1;
 					   	if(than.timer==0){
 					   		than.timer='发送验证码'
 					   		than.clickflag=true;
-					        than.completeflag=true;
-					   		clearInterval(timer)
+					      than.completeflag=true;
+					   		clearInterval(than.calt)
 					   	}
 					  }, 1000);
 	    		}
@@ -69,11 +75,90 @@ export default {
     		
 
 
-    	},
+			},
+			sencode:function(ther){
+				// console.log("send",this.phone)
+				let than=ther;
+				let req= {
+            'phone':than.phone,
+            'type':3,
+            'company_id':1002
+        }
+          let conf={
+            "consumer": "wx_city_parking_member_service",
+            "id": "getVerificationCode",
+            "token":store.state.userinfo.token
+          }
+          getcontent.getapi(conf,req,function(data){
+						console.log(data)
+						if(data.data.result.code==0){
+							    			than.showToast=true;
+												than.duration=800;
+												than.content='发送成功';
+												than.toastType='success';
+												than.completeflag=true;
+						}else{
+												clearInterval(than.calt)
+												than.timer='发送验证码';
+												than.clickflag=true;
+												
+							    			than.showToast=true;
+												than.duration=800;
+												than.content=data.data.result.msg,
+												than.toastType='error'
+						}
+
+         })
+			},
     	complete:function(){
-    		if(this.completeflag){
-    			console.log(123)
-    		}
+				let than=this;
+				// console.log("completeflag",than.completeflag)
+    		if(than.completeflag){
+				let req= {
+						'phone':than.phone,
+						"verificationCode": than.vernumber,
+        }
+          let conf={
+            "consumer":  "cn.sanray.city.parking.carowner.client.service.WxClient",
+            "id": "changeCellphone",
+            "token":store.state.userinfo.token
+          }
+          getcontent.getapi(conf,req,function(data){
+						console.log(data)
+						if(data.data.result.code==0){
+							    			than.showToast=true;
+												than.duration=800;
+												than.content='修改成功';
+												than.toastType='success';
+												let temp=JSON.parse(JSON.stringify(store.state.userinfo)) 
+														temp.phone=than.phone;
+													 wx.setStorage({
+                                  key: 'login',
+                                  data: temp
+                                })
+														store.commit("setUserinfo",temp)	
+
+						}else{
+							    			than.showToast=true;
+												than.duration=800;
+												than.content=data.data.result.msg;
+
+												than.toastType='error';		
+						}
+         })
+    		}else{
+						if(than.phone.length==0){
+							    			than.showToast=true;
+												than.duration=800;
+												than.content='请输入号码';
+												than.toastType='warn'	
+						}else if(than.vernumber.length==0){
+							    			than.showToast=true;
+												than.duration=800;
+												than.content='请输入验证码';
+												than.toastType='warn'	
+						}
+				}
     	}
     }
 }

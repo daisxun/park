@@ -6,7 +6,7 @@
    			<span class="sb">我的优惠券</span>
    		</div>
    		<scroll-view class="my_list" scroll-y>
-   			<div class="item" v-for="(val,index) in my" wx:key="index"  >
+   			<div class="item" v-for="(val,index) in my" :key="index"  >
    				<div class="item_l">{{val.tick}}</div>
    				<div class="item_m">{{val.deal}}</div>
    				<div class="item_r">x{{val.num}}</div>
@@ -19,7 +19,7 @@
    			<span class="sb">尚未领取</span>
    		</div>
    		<div class="my_list">
-   			<div class="item" v-for="(val,index) in getcop" wx:key="index" >
+   			<div class="item" v-for="(val,index) in getcop" :key="index" >
    				<div class="item_l">{{val.tick}}</div>
    				<div class="item_m"></div>
    				<div class="item_r" ><div class="bint" @click="getcoupons(val,index)">x{{val.num}}</div></div>

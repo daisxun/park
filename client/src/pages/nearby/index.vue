@@ -1,22 +1,374 @@
 <template>
-  <div>
-   <span>nearby</span>
-  </div>
+	<div>
+		<div style="display: flex;">
+			<div style="width: 100%;font-size: 0.9em;">
+				<input :value="title" placeholder="请输入搜索关键字" @input="getsuggest" style="border: 1px solid #d9d9d9;margin: 3px 10px;padding-left: 10px;border-radius: 5px;" />
+			</div>
+		</div>
+		<map id="map" :longitude="longitude" :latitude="latitude" scale="14" :markers="markers" @markertap="markertap" @tap="mapClick"
+		 @regionchange="regionChange" @begin="regionChangeBegin" @end="regionChangeEnd" show-location v-bind:style="{height: heightData}+'width:100%'">
+			<cover-view v-for="(item,index) in suggestion" :key="index" style="background: #fff;padding: 5px 10px;z-index: 150;">
+				<cover-view :data-id="item.id" @click="backfill">
+					<cover-view>{{item.title}}</cover-view>
+					<cover-view style="padding: 2px 0px; color: #AAAAAA;font-size: 0.9em;">{{item.addr}}</cover-view>
+				</cover-view>
+			</cover-view>
+		</map>
+		<div v-bind:style="'background:#fff;'+{display:parkingDetail}">
+			<div style='display:flex' @click="toParking">
+				<div style='width:75%;padding:10px'>
+					<div style='display:flex'>
+						<div>{{parkingData.parking_name}} </div>
+						<div style='font-size:0.7em;color:#9e9b96;padding:3px 0 0 5px'> 总：{{parkingData.parking_total_space}} 空：{{parkingData.parking_left_space}}</div>
+						<div class='menus'>							
+							<div v-for="(value, index) in menusList" :key="index">								
+								<img v-bind:src="value.images" />
+							</div>
+						</div>
+					</div>
+					<div style='font-size:0.7em;color:gray'>距离我{{parkingData.juli}}m | 深圳市南山区丽山路125号</div>
+				</div>
+				<div style='width:25%;text-align:center;font-size:0.8em;color:#9e9b96'>
+					<div class='bowei' style='margin-left:25px'>{{parkingData.parking_left_space}}</div>
+					<div style='width:60px;margin-left:25px'>空泊位</div>
+				</div>
+			</div>
+			<div style='background:#ff9934;color:#fff;width:90%;text-align:center;padding:10px 0px;margin: 20px 5%;' @click='daohang'>
+				<image src='../../static/images/navigation.png' style='width:15px;height:15px' /> 开始导航
+			</div>
+		</div>
+	</div>
 </template>
 
 <script>
-export default {
-  data () {
-    return {
-      motto: 'Hello miniprograme',
-      userInfo: {
-        nickName: 'dasx',
-        avatarUrl: 'http://mpvue.com/assets/logo.png'
-      }
-    }
-  }
-}
+  import QQMapWX from '../../utils/qqmap-wx-jssdk.js';
+  // console.log("QQMapWX",QQMapWX)
+	var cityCode = "101280601";
+	var token = "18b529a939f82a77d316fdf6635911459b8c7c6255a9e5c49548501c97926f47";
+	export default {
+
+		data() {
+			return {
+				parkingDetail: "none",
+				heightData: (wx.getSystemInfoSync().windowHeight) + "px",
+				latitude: 22.59394,
+				longitude: 113.93626,
+				markers: [],
+				menusList: [{
+						name: "在线缴费",
+						images: "../../static/images/paySelf.png",
+						urls: ""
+					},
+					{
+						name: "预约车位",
+						images: "../../static/images/appointment.png",
+						urls: ""
+					},
+					{
+						name: "停车券",
+						images: "../../static/images/coupon.png",
+						urls: ""
+					},
+				],
+				parkingData: {},
+				currentPos: {},
+				currentMarker: {},
+				suggestion: [],
+				title: ""
+			}
+		},
+
+		created() {
+			var that = this;
+			var param = {
+				city_code: cityCode, // 城市编码
+				longitude: "", // 经度
+				latitude: "", // 纬度
+			}
+			//获取当前位置
+			wx.getLocation({
+				type: 'wgs84',
+				success(res) {
+					that.currentPos = res;
+					that.latitude = res.latitude,
+						that.longitude = res.longitude,
+
+						param.longitude = res.longitude, // 经度
+						param.latitude = res.latitude, // 纬度
+
+						that.getParking(param);
+				}
+			})
+		},
+
+		methods: {
+			//选择地址
+			backfill(e) {
+				var id = e.currentTarget.dataset.id;
+				var suggestion = this.suggestion;
+				for (var i = 0; i < suggestion.length; i++) {
+					if (suggestion[i].id == id) {
+						this.title = suggestion[i].title; //选择地址
+						//切换地图中心
+						this.latitude = suggestion[i].latitude;
+						this.longitude = suggestion[i].longitude;
+						var param = {
+							city_code: cityCode, // 城市编码
+							longitude: suggestion[i].longitude, // 经度
+							latitude: suggestion[i].latitude, // 纬度
+						}
+						this.getParking(param);
+						this.suggestion = []; //清空面板	
+						this.parkingDetail = "none";
+					}
+				}
+			},
+
+			//触发关键词输入提示事件
+			getsuggest(e) {
+				var qqmapsdk = new QQMapWX({
+					key: 'L7IBZ-QZACD-6424U-PEJJX-QY6OZ-WTBIM'
+				});
+				var _this = this;
+				//调用关键词提示接口
+				if (e.target.value != "") {
+					qqmapsdk.getSuggestion({
+						//获取输入框值并设置keyword参数
+						keyword: e.target.value, //用户输入的关键词，可设置固定值,如keyword:'KFC'
+						//region:'北京', //设置城市名，限制关键词所示的地域范围，非必填参数
+						success: function(res) {},
+						fail: function(error) {
+							console.error(error);
+						},
+						complete: function(res) {
+							if (res.status == 0 && res.data.length) {
+								var sug = [];
+								for (var i = 0; i < res.data.length; i++) {
+									sug.push({ // 获取返回结果，放到sug数组中
+										title: res.data[i].title,
+										id: res.data[i].id,
+										addr: res.data[i].address,
+										city: res.data[i].city,
+										district: res.data[i].district,
+										latitude: res.data[i].location.lat,
+										longitude: res.data[i].location.lng
+									});
+								}
+
+								_this.suggestion = sug;
+							}
+						}
+					});
+				} else {
+					_this.suggestion = [];
+					this.parkingDetail = "none";
+				}
+			},
+
+			//点击地图
+			mapClick() {
+				this.parkingDetail = "none";
+				this.heightData = (wx.getSystemInfoSync().windowHeight) + "px";
+			},
+
+			//点击车场marker
+			markertap(e) {
+				this.heightData = (wx.getSystemInfoSync().windowHeight - 220) + "px";
+				this.parkingDetail = "inline";
+				var markers = this.markers;
+				for (var i = 0; i < markers.length; i++) {
+					if (e.mp.markerId == markers[i].id) {
+						this.getParkingDetail(markers[i]);
+						this.currentMarker = markers[i];
+					}
+				}
+			},
+
+
+			//导航
+			daohang() {
+				const latitude = this.currentMarker.latitude
+				const longitude = this.currentMarker.longitude
+				wx.openLocation({
+					latitude,
+					longitude,
+					scale: 18
+				})
+			},
+
+			//获取附近1公里停车场列表
+			getParking(param) {
+				var that = this;
+				wx.request({
+					url: 'https://wulian2025.net/city_park_apigateway',
+					header: {
+						'content-type': 'application/json'
+					},
+					data: {
+						"header": {
+							"token": token
+						},
+						"data": {
+							"payload_type": "api",
+							"description": {
+								"consumer": "cn.sanray.city.parking.carowner.client.service.WxClient",
+								"id": "getNearbyParkings",
+								"params": {
+									"req": {
+										"city_code": param.city_code, // 城市编码
+										"longitude": param.longitude, // 经度
+										"latitude": param.latitude // 纬度
+									}
+								}
+							}
+						}
+					},
+					method: 'post',
+					success: function(res) {
+						if (res.data.result.code == "0") {
+							var datas = res.data.data;
+							var markers = [];
+							if (datas.length > 0) {
+								for (var i = 0; i < datas.length; i++) {
+									var obj = {};
+									obj.latitude = datas[i].latitude / 100000000;
+									obj.longitude = datas[i].longitude / 100000000;
+									obj.iconPath = '../../static/images/parkingIcon.png';
+									obj.width = 22;
+									obj.height = 25;
+									obj.id = i + 1;
+									obj.parking_id = datas[i].id;
+									obj.city_code = datas[i].city_code;
+									markers.push(obj)
+								}
+							};
+
+							that.markers = markers;
+						}
+					}
+				})
+			},
+
+			//获取停车场详情
+			getParkingDetail(param) {
+				console.log("cityCode",cityCode,"param",param.parking_id)
+				var that = this;
+				wx.request({
+					url: 'https://wulian2025.net/city_park_apigateway',
+					header: {
+						'content-type': 'application/json'
+					},
+					data: {
+						"header": {
+							"token": "221420e1da76f702d1f1fd00c8290fc79ab87505624457106dc1d2a1d2857bbb"
+						},
+						"data": {
+							"payload_type": "api",
+							"description": {
+								"consumer": "cn.sanray.city.parking.carowner.client.service.WxClient",
+								"id": "getDetailsInfoOfOneParking",
+								"params": {
+									"req": {
+										"city_code": cityCode, // 城市编码
+										"parking_id": param.parking_id // 停车场id
+									}
+								}
+							}
+						}
+					},
+					method: 'post',
+					success: function(res) {
+            console.log(res)
+						if (res.data.result.code == "0") {
+							if (res.data.data.length > 0) {
+								var parkingData = res.data.data[0];
+								var juli = that.distance(that.currentPos.latitude, that.currentPos.longitude, param.latitude, param.longitude)
+								parkingData.juli = parseInt(juli * 1000);
+								that.parkingData = parkingData;
+							}
+						} else {
+							that.notice(res.data.result.msg);
+						}
+					}
+				})
+			},
+
+			//查看停车场详情
+			toParking() {
+				// console.log(123)
+				var strings = JSON.stringify(this.parkingData);
+				wx.navigateTo({
+					url: '../../nearbyDetail/main?parkingData=' + strings
+				})
+			},
+			//提示信息
+			notice(content) {
+				wx.showModal({
+					title: '提示',
+					content: content,
+					success: function(res) {
+						if (res.confirm) {
+							console.log('用户点击确定')
+						}
+					}
+				})
+			},
+
+			//计算两个经纬度间距离
+			distance(la1, lo1, la2, lo2) {
+				var La1 = la1 * Math.PI / 180.0;
+				var La2 = la2 * Math.PI / 180.0;
+				var La3 = La1 - La2;
+				var Lb3 = lo1 * Math.PI / 180.0 - lo2 * Math.PI / 180.0;
+				var s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(La3 / 2), 2) + Math.cos(La1) * Math.cos(La2) * Math.pow(Math.sin(
+					Lb3 / 2), 2)));
+				s = s * 6378.137; //地球半径
+				s = Math.round(s * 10000) / 10000;
+				// console.log("计算结果",s)
+				return s
+			}
+
+		}
+
+	}
 </script>
 
 <style scoped>
+	.parkingContent {
+		font-size: 0.8em;
+		background: #aaa9a9;
+		opacity: 0.9;
+		color: #fff;
+		width: 120px;
+		margin: 5px
+	}
+
+	.parkingContent cover-view {
+		margin: 5px
+	}
+
+	.menus {
+		display: flex;
+	}
+
+	.menus div {
+		width: 33%;
+		text-align: center
+	}
+
+	.menus image {
+		width: 15px;
+		height: 15px;
+		margin: 2px 8px;
+	}
+
+	.bowei {
+		background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEUAAABFCAYAAAAcjSspAAAACXBIWXMAAAsTAAALEwEAmpwYAAAKTWlDQ1BQaG90b3Nob3AgSUNDIHByb2ZpbGUAAHjanVN3WJP3Fj7f92UPVkLY8LGXbIEAIiOsCMgQWaIQkgBhhBASQMWFiApWFBURnEhVxILVCkidiOKgKLhnQYqIWotVXDjuH9yntX167+3t+9f7vOec5/zOec8PgBESJpHmomoAOVKFPDrYH49PSMTJvYACFUjgBCAQ5svCZwXFAADwA3l4fnSwP/wBr28AAgBw1S4kEsfh/4O6UCZXACCRAOAiEucLAZBSAMguVMgUAMgYALBTs2QKAJQAAGx5fEIiAKoNAOz0ST4FANipk9wXANiiHKkIAI0BAJkoRyQCQLsAYFWBUiwCwMIAoKxAIi4EwK4BgFm2MkcCgL0FAHaOWJAPQGAAgJlCLMwAIDgCAEMeE80DIEwDoDDSv+CpX3CFuEgBAMDLlc2XS9IzFLiV0Bp38vDg4iHiwmyxQmEXKRBmCeQinJebIxNI5wNMzgwAABr50cH+OD+Q5+bk4eZm52zv9MWi/mvwbyI+IfHf/ryMAgQAEE7P79pf5eXWA3DHAbB1v2upWwDaVgBo3/ldM9sJoFoK0Hr5i3k4/EAenqFQyDwdHAoLC+0lYqG9MOOLPv8z4W/gi372/EAe/tt68ABxmkCZrcCjg/1xYW52rlKO58sEQjFu9+cj/seFf/2OKdHiNLFcLBWK8ViJuFAiTcd5uVKRRCHJleIS6X8y8R+W/QmTdw0ArIZPwE62B7XLbMB+7gECiw5Y0nYAQH7zLYwaC5EAEGc0Mnn3AACTv/mPQCsBAM2XpOMAALzoGFyolBdMxggAAESggSqwQQcMwRSswA6cwR28wBcCYQZEQAwkwDwQQgbkgBwKoRiWQRlUwDrYBLWwAxqgEZrhELTBMTgN5+ASXIHrcBcGYBiewhi8hgkEQcgIE2EhOogRYo7YIs4IF5mOBCJhSDSSgKQg6YgUUSLFyHKkAqlCapFdSCPyLXIUOY1cQPqQ28ggMor8irxHMZSBslED1AJ1QLmoHxqKxqBz0XQ0D12AlqJr0Rq0Hj2AtqKn0UvodXQAfYqOY4DRMQ5mjNlhXIyHRWCJWBomxxZj5Vg1Vo81Yx1YN3YVG8CeYe8IJAKLgBPsCF6EEMJsgpCQR1hMWEOoJewjtBK6CFcJg4Qxwicik6hPtCV6EvnEeGI6sZBYRqwm7iEeIZ4lXicOE1+TSCQOyZLkTgohJZAySQtJa0jbSC2kU6Q+0hBpnEwm65Btyd7kCLKArCCXkbeQD5BPkvvJw+S3FDrFiOJMCaIkUqSUEko1ZT/lBKWfMkKZoKpRzame1AiqiDqfWkltoHZQL1OHqRM0dZolzZsWQ8ukLaPV0JppZ2n3aC/pdLoJ3YMeRZfQl9Jr6Afp5+mD9HcMDYYNg8dIYigZaxl7GacYtxkvmUymBdOXmchUMNcyG5lnmA+Yb1VYKvYqfBWRyhKVOpVWlX6V56pUVXNVP9V5qgtUq1UPq15WfaZGVbNQ46kJ1Bar1akdVbupNq7OUndSj1DPUV+jvl/9gvpjDbKGhUaghkijVGO3xhmNIRbGMmXxWELWclYD6yxrmE1iW7L57Ex2Bfsbdi97TFNDc6pmrGaRZp3mcc0BDsax4PA52ZxKziHODc57LQMtPy2x1mqtZq1+rTfaetq+2mLtcu0W7eva73VwnUCdLJ31Om0693UJuja6UbqFutt1z+o+02PreekJ9cr1Dund0Uf1bfSj9Rfq79bv0R83MDQINpAZbDE4Y/DMkGPoa5hpuNHwhOGoEctoupHEaKPRSaMnuCbuh2fjNXgXPmasbxxirDTeZdxrPGFiaTLbpMSkxeS+Kc2Ua5pmutG003TMzMgs3KzYrMnsjjnVnGueYb7ZvNv8jYWlRZzFSos2i8eW2pZ8ywWWTZb3rJhWPlZ5VvVW16xJ1lzrLOtt1ldsUBtXmwybOpvLtqitm63Edptt3xTiFI8p0in1U27aMez87ArsmuwG7Tn2YfYl9m32zx3MHBId1jt0O3xydHXMdmxwvOuk4TTDqcSpw+lXZxtnoXOd8zUXpkuQyxKXdpcXU22niqdun3rLleUa7rrStdP1o5u7m9yt2W3U3cw9xX2r+00umxvJXcM970H08PdY4nHM452nm6fC85DnL152Xlle+70eT7OcJp7WMG3I28Rb4L3Le2A6Pj1l+s7pAz7GPgKfep+Hvqa+It89viN+1n6Zfgf8nvs7+sv9j/i/4XnyFvFOBWABwQHlAb2BGoGzA2sDHwSZBKUHNQWNBbsGLww+FUIMCQ1ZH3KTb8AX8hv5YzPcZyya0RXKCJ0VWhv6MMwmTB7WEY6GzwjfEH5vpvlM6cy2CIjgR2yIuB9pGZkX+X0UKSoyqi7qUbRTdHF09yzWrORZ+2e9jvGPqYy5O9tqtnJ2Z6xqbFJsY+ybuIC4qriBeIf4RfGXEnQTJAntieTE2MQ9ieNzAudsmjOc5JpUlnRjruXcorkX5unOy553PFk1WZB8OIWYEpeyP+WDIEJQLxhP5aduTR0T8oSbhU9FvqKNolGxt7hKPJLmnVaV9jjdO31D+miGT0Z1xjMJT1IreZEZkrkj801WRNberM/ZcdktOZSclJyjUg1plrQr1zC3KLdPZisrkw3keeZtyhuTh8r35CP5c/PbFWyFTNGjtFKuUA4WTC+oK3hbGFt4uEi9SFrUM99m/ur5IwuCFny9kLBQuLCz2Lh4WfHgIr9FuxYji1MXdy4xXVK6ZHhp8NJ9y2jLspb9UOJYUlXyannc8o5Sg9KlpUMrglc0lamUycturvRauWMVYZVkVe9ql9VbVn8qF5VfrHCsqK74sEa45uJXTl/VfPV5bdra3kq3yu3rSOuk626s91m/r0q9akHV0IbwDa0b8Y3lG19tSt50oXpq9Y7NtM3KzQM1YTXtW8y2rNvyoTaj9nqdf13LVv2tq7e+2Sba1r/dd3vzDoMdFTve75TsvLUreFdrvUV99W7S7oLdjxpiG7q/5n7duEd3T8Wej3ulewf2Re/ranRvbNyvv7+yCW1SNo0eSDpw5ZuAb9qb7Zp3tXBaKg7CQeXBJ9+mfHvjUOihzsPcw83fmX+39QjrSHkr0jq/dawto22gPaG97+iMo50dXh1Hvrf/fu8x42N1xzWPV56gnSg98fnkgpPjp2Snnp1OPz3Umdx590z8mWtdUV29Z0PPnj8XdO5Mt1/3yfPe549d8Lxw9CL3Ytslt0utPa49R35w/eFIr1tv62X3y+1XPK509E3rO9Hv03/6asDVc9f41y5dn3m978bsG7duJt0cuCW69fh29u0XdwruTNxdeo94r/y+2v3qB/oP6n+0/rFlwG3g+GDAYM/DWQ/vDgmHnv6U/9OH4dJHzEfVI0YjjY+dHx8bDRq98mTOk+GnsqcTz8p+Vv9563Or59/94vtLz1j82PAL+YvPv655qfNy76uprzrHI8cfvM55PfGm/K3O233vuO+638e9H5ko/ED+UPPR+mPHp9BP9z7nfP78L/eE8/sl0p8zAAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAABtWSURBVHjazJx/rGVXdd8/a+19zr3vx/y0x7/G2DAYY9eYX8YCBwoFDBFuwaJNCgmEhiRNqgiUUDWkqVClklaoQi1poEpbKRVVa7WhVRRaCi0gkQBtEGBKYsAOxtjG9nh+vzfzftx7z9l7rf6x97nvjj0zHopcfKyrZ1/fd88+a3/XWt/1XWs/2Th2hNg4KTYs6xa6fA2L17FTZ9jPEe7+H/+Mj3/8LrZWXsEdP/db3PmW17GkCbThXNd73/oCsneE0PG77/kZwWWE+1hUA5Bx38K9/8gXHr7hF37lvbc0TUNwXwn4ikjcQsIW2mx6MzqWiX+aJeASMVEsC4ijGkACTdPSxhZ3QwTMDeTs9YgL4MN/gAugC59whl+SE+uHWWUMTWS0vOucD7h++gHGm9/mP/2LD/KVe45j19zOL//6B3np9QdR5UkLeN/bbmRl9z4++LOvB5eVIyc3bp1103eurozv3LW6emkTI8kFs0xUCBLAEgC5LAuTSApjOll+lKW9f97svfzu8e7L/iIs7b5v5s1RNDyaLBDaJZpmBREh9R0iTtMo5ob78PBSHzsj7og6uCKEYgoRBMPNUFHkVNpmZXaMdvlaLnR1p45w5J4/4Pc++k843B/gqpe+mV9679/jir2XsCwTujNH+fOvfJaXxeOY9sFldvDBx0599OpLD7x5FKMIXtY3XKrgjntZqKpCNlwFqTvqCEjAEHoXRFtyO4blS+9ZOvDc/8zq1X9EXL4nxwZvIiIN3jtNMJwO8hhoAAOdgSSEAIyBhPs2ZsV4ZlY2JSXC3//Ae1kZH+SprrC0yureZYId475v/W/OHDvO/Y+eRq+4gWv27GM0ihx81iU3HTvx8O9urR39x+M2/qMDu5dubMRFvMBdxBEBdwMzgjpa38MNJODSgCgCiGXEe1SMKJnoHSF1+GTj8rT+6GvTmcfebt5d3q4sHw7Qi+eptkryjiCGIIhlPE/xPMXylFnXMZ1Omc22SWlCzgmzXNbkoKrEdpaKMS/iyqtX88qffBunjp/mj/7nNzn8wAPsi5ngHbb2/bdPH/k/v7F3tv6idtdqcAFDQUHdQXJxW3OCVl92K2hBKsIdrzvmoiARRDARDHBVAtBaR7IO29zap9tH3jd7/L73+RU3/tN2/zWf7kP4ookwMwW3YlwUkYCqEoISGsdpEVYREVQFkVDcSCIyXT/OaM+lF2WU6eQkTRC2H7mX//6ZT3HVS27n5Tddf0ge/1+fSMceuKWxRPRU/JMCexEDF8QVJD3pO4tL1QDnjnh+QuBTXAQTxREK6DLRE5iARDoNJG3Io71rywdvvEt2H/xkGu37vIqQETQ0KE0xjBhorm41OjvODkF5c/1RVvYcvCijfPhDv8lfft3P8vIXPB+bHcXT5I7uvi98okkPrUTNiLVgS7hkkIxJQiShuQGPuHB2XKlrGd5TByWXd50SC85OIdWQgtEgHlBPoNC54joi5czSlc+7Rw696m9Ku+8+fBlU5/eQ4WvPsZbhimYt69vH2Lt82QUN8rG/+xK+ee8ma2eMay9718E9p7/3L+30kVcvc2ZFXXEHR+tdFRfDBdS1rsJ2FnXWg+68Z6LkwZcFBEMxpLrBHD0eUDIuCZNIzpG2afBum1FjTI/ee/P2ya3/sO/6235b9h36JDaGprig7ti2oPhJUBHC+9//DxDvcHqauHROg3j/fa4ZCd/5+p/ScpoXX91+dc/soVeNfH3JrAMaTCKCoJKQutuC4jS4hBJMxRkS5M7LQQzBiwGqIUocKot00RJjUJwAaLmXUzNXhjRDgpJNaHBGduaqrZOPvV3F9oQ9u74qoZ06igOqlce47uwMQskCgmysb6JsobLBfV/8BC/+a791lkE+/V8+htiM9uQjrzh8/9f2vfENr/rkvuXYNGlWzd6CKUZAMSANEQInMuwx4qjb2c571g75Injws8xW4OTD//EaPN2BVH5XwTzgxGJc28bjiAnLxKtu/mT73Nve7bp/zSQg1qOiIFpv6ztETkC2zqyjss2ZY9/i3/7z9/P4974FzSXMRlfTru6ln5ykFeE5l65e8647X3/vniYviyUQxVCCZ4Rcd1B4JlxecjzqPW5O1+6nv+TGu1af/6pfQXdvOSWrFVt75UuVOwGa2MQ1s7J3L8++/iVscSn96CDLBy4hNMbB/c+KL7vump/6hZ+64/69DcuSZ4j1dW8HWMszxiBDFnMTsjR4aAlphhz/7ju67375E9ja5ZDIUoM8UnhRJY2CIyfXHyPi7ApOmm5w4sQ6KS4jjbLLpyxvb/zO7MjXfm1ZNhHvoJsiy7ux7BixIiVVpDyDLgn0VsmYd2DGRJYYHbrt3+i1t77XdbUTBzxB6jBLuHUYmYi0WO7pPSDxMnYdvBwdNYTOGE1P3DY5/u03j5gUKCLQLmEpAxEZsooXturPFLS4A5lAwD1XtpxY0p7TD93zy8uhXbM9B744Ufm0WabPPeY9nmZkOqI7hABOTyKTCND17Mrbt2we/sYHZPLAIRHDPM4DaEmfENzndcozCyUlnQdZJIENjjBmm/7hu39zctmVh46vrDZJm08mwKTEIOjRhgZlXOm0IR4YJ6c/ef/P+5nv3tFaRtDCBySSJeBoSZkLud2faVZBimt4LmRPx3SuNJIZdSfQtUd+ejydvDDMEp4aLI2xNMbTCnFlNEJMEGlLhjUn2ubNpx+7992reULI42KsRb0Bq1xkJ9jKE9nnj/EyKauNSHUlwQYC6EYQY7nr2B1HrwhXXUfS3fQ6RhyCZzT4NqpblSVGIhtXd8e/+q/H3dGVkAwsoZ5Qz/VnKvWJG7hiEsgSnznxZDCMKkmKCCU4gUzEcE+YBCQlZocfew2bm++J1hLyCMktmsYoqrgrxISyiU0fvyMdvve2KC2mTSnifCjMwMXrT8W0UOZCosKQ0HBiRVQ1IIIJmPakkEmq1ZADoywlQRYhS8RkAZFuOwF9KBUckFxKCSLiodyLWWHELgQztKbcOenDChd2KZRkemKlf+hbHyBt3qKpJxNRetSJuDaYJcQ3b+5+cO97xrlUTFmGp5b6APIkTiIYgYx6rosX/KwIM9QrhaarCcG9fp7KJAPiRvDByNVQ9XcHal/ua3ND1jJyx7hS6y+0lgAX4jKZRnts49jlvrV2c4mUCRdHi/0M8YRN1l84Wz98MygqHdGNqgAVPWQxiM0NM/AUm+9GVT/Kg0gADHVFc0vIAc2OWp6jyCn0HIfgqQZxrRmjAQ8wN4zW7w71Tk6WQJK2viL5LO31fEaxWgkl+scffAeeiMxIJbYK7oZ6uro7+uBPL+sMcUG8R7yvgfTsTDPsmgx1g/eFWovWT9lC/SMLphRcZEczlgzMEPrilup4dSWpCLBgmKYqUknRVauApdVFkYzUdUlF71MaRYp2I94zOfHwq5mduj1YLt+bPaMC5M1D6fjDd2o/K/Kxa9Ex6yIWJY3y0gU0FPdyX6D9XsThudu5YZLJauQgpBAw0ZrVCnQFx6SZq3LlMQ0NxYXLQq3ci1A9u6BcPRGzFcmSbmEDz0fwMmQnuLAattvu+HfeJ2ZXF00HCJaw9cfuaGyzkHXpqlFsIToMgW5RoioGMdqqTQjiJexS0VUCs5c0KRTtNINKwAiYtBixGNcFl1ADs2NS41EuOHBPoFar8QUXlhJ9rG5OFoXQICFUguvngkqRIvtEyCfZvu8Ld5C7fY0PzuezQ+nkI3cG7yFEXIqIjAxa6oCAMA+eRQIty8vSlHWJIiGIqM4VNa18xqQQvmIQRcxcQ6yG3UnoXpFD5RqFIypePcJscOWdV/AaXkXdNFQNRzAr1a+InKMS0KLH0mPrj+Anvut++vE3SpqhKgp5+2rfOHWDutdFxbK7tEgNsFKeEMRwqcFUwWgK3RevT5GKOl011Z0UKjtSoqg7IuTi03iuhrG5O5WoMaT0oplkiaDRi3RZP++KSV23myhaPmNelQA/D+eNRfkJU/z0EXb7TDaPfvt+NKMiAlsnb5F+goiSPSNWjFIQ4AvpUErQFZDaWHK0sFv3hYcQ8cprZC4kzvVVd1xwr0K1lwBsT1aQ1X0ew0pPSyxLEIcqWA3fXJBcMnkmSBY8YymXftIT6T/gHhAN5P40IW0jfQ8nv/cW14yKdcxOHXlN1B5IRC3yYKYlui1UNQu8waXqX7YA+1KXGqGgn3w+BIjSI55K95TCiksseSICdtR+MSEiEs2roWVOzXbaonUlOYOEXJS1hHhCJBR31wieEZsSfJt0/FFcE6oJPXH/XxcDFUvYbPsyt1RVqJ2aZiBI6ukJtY64DP5Qg+881bLDcp8aATtydK4xZBEBdpaI5Yj1ghaCVYxZrKb+BFmz9JTD/G0pLVpU5mYUzbC5BtPtEndwmJ7Zx/Q0ETW8m1xeNAerke1sBAyiNO5FeiyadH3wnYBXEOBz45kElMIHBgTgoRaYzA0TvfhI4T2LCJC5uDxwSCzjBEdUWNBshww0sFwxQ9Rxq26s9amsLj5vkc4cg9o/xgxshm8cuUax7gax2eVBrbLSxRS8gACRpw8BlYCdjQAK7cdqjeOVHYeak2wnxpUcdHYpUIQmt0r9szvFGyoPnqyTJydpQwArrhvJbK89clPE+hXybGUIhSJSi7D/PwgocNeie1S9lIWstUgcfWh7uIj4wFViMYgPac7mLoQXyoBILRBSIZ39NvnMcUKeQBhX7iAEEpubx65V1FvJqTblFF8MWD8yAnqQdBEI0DlFZ2hZCU+osXzHjpiUAH6hUsBr50lqB6RsNt6Rz5yAyWmCGG6p3sYQF2y2cZWS+xXMcC+9G6+E7dxZoCLAnGh2DgQwr4aH6hevBd8TELCYJX2BksucrZ6jJ+SppuCwUArIBUuB2hJCLIH3MFmjP3OE6LM5CS07XgzqXTfWRW5Tvqha9kdFgHjtv4RqsAsgQBbjk1XD7mQzvDSuREqP+eJKAZ+vWYfb9x3dqWM0ebMQQi/1F2pkcfCAmDeKaLdTw8pCvv8REfAkBnkBBMwDvFQkLGi+dfdLOJFFGnjhUkBLdNN5cZroTx0lT8+gUloegwxRphkKV1JpekXjVmobXCCa1QErLS3PHxoB5y1Jz4sAkVBKh3nNYwvSpiwQx1R7zhdRCsQRHhTFVKxHPJM2HiNvPsJYEkLEQ4vgtGlCloDYmKSONLsOa9U8OoYYctbcCD8kAi6grD8RAbU5V3JmOGtO5Unf98OUAlrRm4diNJE2TzBbO0zrM8RTAY7sTEiIO8GcIE4c7z6uoHeH0PSyCGmxHw0BT2qfnwMBMjTOi4wZrO6ElzkV5jptSdMXVwqohzBCLIN5eU3W6E89zIpso9aBpSFQ1LjUErASxHPP0t5LDyshQFw6uiPz1WdY7MRfuB3HU7fEzoGAMks1Zz8FOLkUat5XtqFzQz0VDXAUYnDSJpK70quZnWJ29HvEvAV9x1y4lYEZC1lDiTlS6rBm/5XfVDzgcfn7prEsrGqqJTqfHwE7D2cXbG+onwsBZdxLJAgazETdhzxY5Qn1KiZVBS64EweKLqEw7ArBTJM8RnPvtWi/gs22pT96L9G3Ecm4RpDRvJou4dLKXF5NYBaXYc+BNXUi7a5Lvp9pcJUFd70YBPAUst9QR50HAWaIu6Ii4kHwpgpEaY6OQSspUqXhIWZvVsntKt4uS9SoAYtqvRZ3Ekx8W07cSztbRzEyRRsyGWESdorGISZKqd1l98EHLC6hSSLN3is+n4ill+MXh4DFIFgRUJPmkK4HDcRYYFAVAbmU9CSMvg4W93joyZoxjWRGmLbFqMM4p0NOObj3yVIi11FPHeZyRcxcuu7o/cu6daQ8uzsqJYY4Qp7H/eIFgQQEkjR0+579h0hLtNDio133hfFqlyYbbaNamN9Cm/T8l1IM3WG1whgE7do4Ke0Jr30jmSJ1IHBIaeqxVjUO7hIzJd2LYZ4RFTx5EYS8R2JGbBolC6pOL7HLuuRNXh/pxmGVM4+0zWStCNtooTk2Q3MEhayDTlpavcEdaEjS0Fx66MuoEkvV2dzD7r33+PToLVmEOMyS+aI2rPNO3lmVtGqdGmLeyRMxsuSavQzXIj8oEfemthf6eXHo8+Etr+JUqJNS5Z9GBFJGm4ZODcmBVgz3nijWhq11+mPfZZQeRyxjukx2iKa4zQhqcwarQ2niUqm9YwhJWnYfvO5zfQ7EkAQPS7T7r/r87MRDt7j3pRWZHWVGDlI6LD70VWyu0pefuWaE2k+utLsgYGekrCg+oRIKaqPLnpTHBlcruS8UZNUvEE80vWAkXBIyW8fWj5A3TzCyWW2gB4L1DM9eZNo4T6TB6jZoxt2R3EJoGB143tdZvnQCS6jGMrshq1d+3tsVok8Rd5IuYTHUbJRx7XFN81HQQnoiapFgTdVZikI3aBaL/64klDz/ORxNYIGd7pT9g35bqAYaQAMZKYPFdgZbe4TZsYewjRM0NqvKoMw7EHJOArn4fsS8gQDbIsh1t30IVhGUmLwrk6tx/93N/md9nkcevB0i1rQkjFGy0vmThSLO5Um38LkAdI6h4DmBzReRr/SsijnKIA6VMQnrtuDkw+TJJpGeMDfwQMa0gu0puoReDkz06myt7H9g9fIX/yGsIA7RvSuHBGy8Fvc865PHvrZ2+4HxlLDnEpp2XAvE5R1RSArMHcc1L9xkcToyLCBgxwwuTy4ZfNFCriSJNQDmMlmUZ4jNYLZBPnOKyeY6qyHTioP1ELTCaZEtO0/JJTwTBLZ1xN7rX/cxWzmIWASMGC1jTQtdIq5c8fl9172C6T0fR7YeR5rdjPYegOiItDudtVCdozQrUBGCdZWSz5nRWUbxWmRmZN6xExytfWMA80xkVkbLPUGe0J16HOk2kNkWwXtWh+wxiFPGAvP2Bbb7lBMseO6YrV59ePU5r/kds4BIQWQM0tCnGSFEkF33xeff9s6N+/7bv9/XPSr9LDOdnsbjCnG0i2Z5GcYrYC3qAZVYZuRL9VBLmtKOdOGsQ0iD8wUpvMN9GCCUCkIvnGG2hm1v0G9v4N2kmNH6Ep+k1EwZqRPZviNcL0gPF2uUPNrDnute9fuydIggGZMeXImGEkm4CsmE2O6/a3Tjm3blP/uPvxcF+rRFZEru1phsKhqWkdEKMtpF0yyjcQliSwhxDg4z2RHBZEFrybN5MBV3sFzGNWcT8myK91NCdwJxJ9Zdd3ekdhuz6M4kpizEoKF56Rc/edeFZTZWD339kpve+A9nWRjVKXQTQ/rJBoFMwpEYkNQRujXOfPYjn106dfcbQjSs79Babwzz8cWNh6mjiCytIhoIsS3jlrJYYVcxJ00h9dB3WO6xVJpiUpvapZlnYLmw2MVG/nxKysrxlKqmUKdM5oL5RSJlrbmEXT/xi2+MV732cyyv0PeZSMIkE1WcJC3BO3LucF0hjMbsvvXtb5v8yUOnfHqUVptaMdVYoT1BKhewerJr+/ROMHZfFF/n+kzWZv5oWmcNxMtc3UC9jcJ3goRiyzy0K7ye9Ru+H1ScUozIE9Kvn8W6TaTEKckYDeYjlq655a74rFs/581ecrcOYYV6/gp19zqcA9EjTXa6LsKlN6zJC976zilL9J5K4eG1D6Rl+C9rrG3IJxyeqXPvLCiYItB4T/RE8Fya8oPxtAFpKuNcmN22YdxDF1ofBZkQwcsYl7pXjWVxGiGBWQ3uLUmhn2xiYYnp3hu+Pn7RW9+ZdT+Wt8tkqPVzbUhlOLUFuGRMOqQ1ehfG1992V3zOX/l90b3MciCPBNEtxGZIXib0qwQrM7Y8o6YjpbJnQ+gJdEQXmqW9bNsSK69851/td11//opOXVGvoBbHtUeCIe0SrgdYfunf+KXpgRd+JrGKd7OaVbQ0yKQHX0ItPuNGrp1Ir2OyZtQnmMG272XXa3/1tnTZC4/1Ei5Q5tZ5kzJNEEpcyD05Z1JYIa1cy8qr331Hv//ZX/K4G3JEguHaVbF4yoVVqB/DaP4QsaqsatKS20sIt/6tO+XKl31F3Gl8dn6jZM3YMPnoDXhLcKERA8n0YYSNDrL3db/66um+G7+UtC0TaqJYLDoIOvsh+MHTcT7Bd2LZMG9pHQ0zkiub7WXYS991x+jG2/8rMkZyIsgF1MJcH77QaqmGKQcWg3claocGlq9l1+t/7dWTy175iQlL9N0EacZ0pB97OBlI3fzKHdgMrGUWLqF9+bteN7rpJz9jvgTaYDLGLnDuWCbdaRpPhEzxQxmB9LQ+BYwkLZJnEFbBhTB5lMk3/+Aj9sif/Lr1W7QSGaXtixS5nzarLFCBIoBKs4tTeuAv9t3+t9+o+677gesKSZfps9CKlEHi8xSNMp1u0XiHWodLZBZHmDijPCOY4IzK/JsbJmXGPfSn6B/88jum3/jUR5fS8X2aNsofY3iGXLO4m+6Kl/271Zf/zM/npecQg+PW0ekYdEybeyR35HDuNUs33SJaKidOVem1sNToiWAKHukt0MQEdJVFBjRtICe//dytb3zqo9P1H7xodz52VcxdpeH1HJ8vxPPKRmFxPGtRZvAFZW9hqturUixVHjAvotFwZlEyaCJhzMIqvnTlWjz0Ex8e/6U3fahvD4I3qHeo5jqJrYSUkVBqqHMaJU1OX1R6EzLBEyZCllB04uk6GraZfe/rb9q+51MfaafHnj9mWuY+pExZIoK7ki2jWs+QzsleHbAZppDE60i7zGfs56qC5dodEdwEMa3DTAkLDWfaS5JfeeuH973gDR9i/3Ub2Zb+373xqY1SWozBDfFcDlRrQ2/OUgCZnoLQwWQN+/7d7zn5nT/+xdXu6ItHbKGWit6hRt/PaKR9AsmT+QmPoXMQfKE/Xf+ciIam9Gscsid0bKRUTrta3EXe/bzP7X7Vz91Je2jC6ADJujI38PQbJSFumAi9tJiOylyIdTQkenMaTbB5hHz03jed/s4f/x0/89AbVn1jqekn6KDcydDEr/KjDMPmoR5CCAsqe54P8kEgGSSNpNEyZ/r28N7nv+ZfjW98w2+zdAU6arHeSbaESovo5Ok1imlpVQ4CTpaGLC3ZfX7Kp/SGczlNnjtimpDWH4vpyH1v4cGv/UZef/gV5Y9D9Ag9Kn09D+Tzyrto3mnhiAwkGpKO6WSELu0+tnrlobvTFS/+aHvgxZ9hfBWuioSenHtcS++q9IjC02uULIou/N2B+ezrwjxLr4FAInqHep7XZU456cn2KfKJB1+2vX7kGts6flPYOv4ytk/cFPrNa6WbRM3lrF9qlpM2ow1d2nXMlvd9u1+9/Etxz8E/W7r0mm/q7svWLO5CUksOYBJockBy7QUHo9eSCMKPcHpP3J+Bp0V/zNf/HQCMNyiXiD53PAAAAABJRU5ErkJggg==");
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+		width: 25px;
+		height: 25px;
+		padding: 15px;
+		color: #fff;
+	}
 </style>

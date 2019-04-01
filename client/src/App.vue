@@ -14,14 +14,14 @@ export default {
     if (mpvuePlatform === 'my') {
       logs = mpvue.getStorageSync({key: 'logs'}).data || []
       logs.unshift(Date.now())
-      mpvue.setStorageSync({
-        key: 'logs',
-        data: logs
-      })
+      // mpvue.setStorageSync({
+      //   key: 'logs',
+      //   data: logs
+      // })
     } else {
       logs = mpvue.getStorageSync('logs') || []
       logs.unshift(Date.now())
-      mpvue.setStorageSync('logs', logs)
+      // mpvue.setStorageSync('logs', logs)
     }
   },
   log () {

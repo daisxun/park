@@ -1,18 +1,5 @@
 <template>
-  <div>
-    <div class="nopaybox">
-     <div class="nopayup">
-        <div class="plate">{{nopay.plate}}</div>
-        <div class="type">停车类型：{{nopay.type}}</div>
-     </div>
-     <div class="nopaymd">
-        <span class="addrs">地址：{{nopay.address}}</span><span class="btns">￥{{nopay.money}}</span>
-     </div>
-     <div class="nopaydown">
-       <span>{{nopay.time}}</span>
-     </div>
-    </div>
-  </div>
+
 </template>
 
 <script>
@@ -25,6 +12,9 @@ export default {
 },
     created () {
 
+    },
+        jumppay:function(){
+      console.log(123)
     },
   methods:{
 
@@ -66,6 +56,7 @@ export default {
 }
 .btns{
   background:#FF9933;
+  border-radius: 10rpx;
   color:#FFFFFF;
   font-size:26rpx;
   padding:10rpx;
